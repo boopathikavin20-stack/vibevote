@@ -70,13 +70,17 @@ func main() {
 		}
 		c.File(frontendIndex)
 	})
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	server := &http.Server{
-		Addr:    cfg.Port,
+		Addr:    ":" + port,
 		Handler: router,
 	}
 
 	go func() {
-		log.Printf("PulseVote server starting on %s", cfg.Port)
+		log.Printf("PulseVote server starting on :%s", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server failed: %v", err)
 		}
