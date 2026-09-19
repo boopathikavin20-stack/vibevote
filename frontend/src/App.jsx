@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
 const starterPoll = [
   { label: 'Morning coffee', votes: 42, color: 'coral' },
   { label: 'Iced matcha', votes: 28, color: 'mint' },
@@ -9,7 +11,7 @@ const starterPoll = [
 
 async function requestApi(path, options = {}) {
   const token = localStorage.getItem('pulsevote_token')
-  const response = await fetch(path, {
+  const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
