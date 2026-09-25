@@ -10,15 +10,16 @@ const starterPoll = [
 ]
 
 async function requestApi(path, options = {}) {
+  const { includeAuth = true, headers: optionHeaders, ...requestOptions } = options
   const token = localStorage.getItem('pulsevote_token')
   let response
   try {
     response = await fetch(`${API_URL}${path}`, {
-      ...options,
+      ...requestOptions,
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
+        ...(includeAuth && token ? { Authorization: `Bearer ${token}` } : {}),
+        ...optionHeaders,
       },
     })
   } catch {
@@ -46,14 +47,10 @@ function toLocalDateTimeValue(date) {
 }
 
 function getVoterStorageKey(pollId) {
-  const signedInUser = JSON.parse(localStorage.getItem('pulsevote_user') || 'null')
-  if (signedInUser?.id) return `votiva_voter_${pollId}_user_${signedInUser.id}`
   return `votiva_voter_${pollId}`
 }
 
 function getVoteStateKey(pollId) {
-  const signedInUser = JSON.parse(localStorage.getItem('pulsevote_user') || 'null')
-  if (signedInUser?.id) return `votiva_voted_${pollId}_user_${signedInUser.id}`
   return `votiva_voted_${pollId}`
 }
 
@@ -255,7 +252,7 @@ function PublicPoll({ shareCode }) {
   useEffect(() => { requestApi(`/api/polls/public/${shareCode}`).then((data) => { setPoll(data.poll); const savedVote = JSON.parse(localStorage.getItem(getVoteStateKey(data.poll.id)) || 'null'); if (savedVote?.voted) { setHasVoted(true); setSelectedOptionId(savedVote.optionId || null); setVoteVibe(savedVote.voteVibe || null); } setMessage('') }).catch((requestError) => { setError(requestError.message); setMessage('') }) }, [shareCode])
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer) }, [])
   const expired = poll?.expiresAt && new Date(poll.expiresAt).getTime() <= now
-  async function vote() { const selectedOption = poll?.options.find((option) => option.id === selectedOptionId); if (!poll?.id || !selectedOption || hasVoted || busy || expired) return; setBusy(true); setError(''); setMessage('Recording your vote...'); try { const voterStorageKey = getVoterStorageKey(poll.id); let voterKey = localStorage.getItem(voterStorageKey); if (!voterKey) { voterKey = crypto.randomUUID(); localStorage.setItem(voterStorageKey, voterKey) } const data = await requestApi(`/api/polls/${poll.id}/vote`, { method: 'POST', body: JSON.stringify({ optionId: selectedOption.id, voterKey }) }); const savedVote = { pollId: poll.id, optionId: selectedOption.id, voted: true, voteVibe: data.vibeMessage || selectedOption.vibeMessage || null }; localStorage.setItem(getVoteStateKey(poll.id), JSON.stringify(savedVote)); setHasVoted(true); setVoteVibe(savedVote.voteVibe); setMessage('') } catch (requestError) { if (requestError.status === 409) { setHasVoted(true); setMessage(''); setError('You have already voted in this poll.') } else { setError(requestError.message); setMessage('') } } finally { setBusy(false) } }
+  async function vote() { const selectedOption = poll?.options.find((option) => option.id === selectedOptionId); if (!poll?.id || !selectedOption || hasVoted || busy || expired) return; setBusy(true); setError(''); setMessage('Recording your vote...'); try { const voterStorageKey = getVoterStorageKey(poll.id); let voterKey = localStorage.getItem(voterStorageKey); if (!voterKey) { voterKey = crypto.randomUUID(); localStorage.setItem(voterStorageKey, voterKey) } const data = await requestApi(`/api/polls/${poll.id}/vote`, { includeAuth: false, method: 'POST', body: JSON.stringify({ optionId: selectedOption.id, voterKey }) }); const savedVote = { pollId: poll.id, optionId: selectedOption.id, voted: true, voteVibe: data.vibeMessage || selectedOption.vibeMessage || null }; localStorage.setItem(getVoteStateKey(poll.id), JSON.stringify(savedVote)); setHasVoted(true); setVoteVibe(savedVote.voteVibe); setMessage('') } catch (requestError) { if (requestError.status === 409) { setHasVoted(true); setMessage(''); setError('You have already voted in this poll.') } else { setError(requestError.message); setMessage('') } } finally { setBusy(false) } }
   async function copyLink() { await copyPollLink(shareCode); setCopied(true); window.setTimeout(() => setCopied(false), 1800) }
   const timeLeft = poll?.expiresAt ? formatTimeLeft(new Date(poll.expiresAt).getTime() - now) : ''
   return <main className="public-page"><div className="public-card"><p className="eyebrow">PUBLIC POLL · {shareCode}</p>{poll?.expiresAt && <div className={`expiry-banner ${expired ? 'expired' : ''}`}>{expired ? 'Voting has closed' : `Voting closes in ${timeLeft}`}</div>}{message && <p className={`form-intro ${message.startsWith('Recording') ? 'pending-message' : ''}`}>{message}</p>}{error && <p className="error-message">{error}</p>}{voteVibe && <p className="success-message">✨ {voteVibe}</p>}{hasVoted && <p className="already-voted">✓ You have already voted in this poll.</p>}{poll && <><h1>{poll.question}</h1>{poll.description && <p className="form-intro">{poll.description}</p>}{!hasVoted && <div className="public-options">{poll.options.map((option) => <label className={`public-option ${selectedOptionId === option.id ? 'selected' : ''}`} key={option.id}><input type="radio" name="poll-option" value={option.id} checked={selectedOptionId === option.id} onChange={() => setSelectedOptionId(option.id)} />{option.text}<span className="choice-check">{selectedOptionId === option.id ? '✓' : ''}</span></label>)}</div>}{!hasVoted && <button className="coral-button form-submit vote-submit" disabled={!selectedOptionId || busy || !poll.isActive || expired} onClick={vote}>{busy ? 'Submitting...' : expired || !poll.isActive ? 'Voting closed' : selectedOptionId ? 'Vote' : 'Choose an option first'}</button>}<div className="public-share"><button className="icon-action" onClick={() => sharePoll(shareCode)}>⌯ <span>Share poll</span></button><button className="icon-action" onClick={copyLink}>▣ <span>{copied ? 'Link copied' : 'Copy voting link'}</span></button></div></>}</div></main>
