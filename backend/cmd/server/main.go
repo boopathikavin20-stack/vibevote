@@ -70,9 +70,9 @@ func main() {
 		}
 		c.File(frontendIndex)
 	})
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	port := cfg.Port
+	if strings.HasPrefix(port, ":") {
+		port = strings.TrimPrefix(port, ":")
 	}
 	server := &http.Server{
 		Addr:    ":" + port,

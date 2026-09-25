@@ -20,7 +20,7 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		Port:        getEnv("PORT", ":8080"),
+		Port:        getEnv("PORT", "8080"),
 		Environment: strings.ToLower(getEnv("APP_ENV", "development")),
 		MongoURI:    getEnv("MONGODB_URI", "mongodb://localhost:27017/pulsevote"),
 		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),

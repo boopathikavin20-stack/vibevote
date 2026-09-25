@@ -11,17 +11,24 @@ const starterPoll = [
 
 async function requestApi(path, options = {}) {
   const token = localStorage.getItem('pulsevote_token')
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
-  const body = await response.json()
+  let response
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    })
+  } catch {
+    throw new Error('Unable to reach the API. Check VITE_API_URL and your backend deployment.')
+  }
+
+  const contentType = response.headers.get('content-type') || ''
+  const body = contentType.includes('application/json') ? await response.json() : {}
   if (!response.ok) {
-    const error = new Error(body.message || 'Something went wrong')
+    const error = new Error(body.message || `API request failed (${response.status})`)
     error.status = response.status
     throw error
   }

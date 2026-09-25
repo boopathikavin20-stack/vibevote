@@ -1,4 +1,17 @@
-# React + Vite
+# VibeVote frontend
+
+## Deployment
+
+When the frontend and backend use different public URLs, set `VITE_API_URL` to
+the backend URL before running `npm run build`, for example:
+
+```bash
+VITE_API_URL=https://api.example.com npm run build
+```
+
+The backend must allow the deployed frontend origin through `FRONTEND_URL`.
+When the Go server serves `frontend/dist`, leave `VITE_API_URL` empty so the
+browser uses the same-origin `/api` routes.
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
